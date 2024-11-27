@@ -22,32 +22,57 @@ namespace RentalCars.Controllers
         [HttpGet]
         public IActionResult GetRentals()
         {
-            var rentals = _context.Rentals.Where(r => !r.IsDeleted).ToList();
+            var rentals = _context.Rentals
+                .Where(r => !r.IsDeleted) // Filtrar por IsDeleted
+                .Select(r => new
+                {
+                    r.RentalId,
+                    r.UserId,
+                    r.VehicleId,
+                    r.StartDate,
+                    r.EndDate,
+                    r.TotalPrice,
+                    r.TotalDays,
+                    r.IsDeleted,
+                    r.CreatedAt
+                })
+                .ToList();
+
             return Ok(rentals);
         }
 
+
         // POST: api/Rentals
         [HttpPost]
-        public IActionResult CreateRental([FromBody] Rental rental)
+        public async Task<IActionResult> CreateRental([FromBody] Rental rental)
         {
-            var vehicle = _context.Vehicles.Find(rental.VehicleId);
+            // Validar si el vehículo existe y está disponible
+            var vehicle = await _context.Vehicles.FindAsync(rental.VehicleId);
             if (vehicle == null || !vehicle.Available)
-                return BadRequest("El vehículo no está disponible.");
+            {
+                return BadRequest(new { message = "El vehículo no existe o no está disponible" });
+            }
 
-            var user = _context.Users.Find(rental.UserId);
-            if (user == null)
-                return BadRequest("El usuario no existe.");
+            // Calcular el totalPrice
+            rental.TotalPrice = vehicle.Price * rental.TotalDays;
 
-            rental.TotalDays = (rental.EndDate - rental.StartDate).Days;
-            rental.TotalPrice = rental.TotalDays * vehicle.Price;
+            // Calcular el endDate basado en startDate y totalDays
+            rental.EndDate = rental.StartDate.AddDays(rental.TotalDays);
 
+            // Marcar el vehículo como no disponible
             vehicle.Available = false;
 
+            // Guardar el nuevo alquiler
             _context.Rentals.Add(rental);
-            _context.SaveChanges();
 
-            return Ok(rental);
+            // Actualizar el estado del vehículo
+            _context.Vehicles.Update(vehicle);
+
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(GetRentals), new { id = rental.RentalId }, rental);
         }
+
 
         // PUT: api/Rentals/Return/{id}
         [HttpPut("Return/{id}")]
