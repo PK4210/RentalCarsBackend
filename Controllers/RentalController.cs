@@ -2,11 +2,13 @@
 using RentalCars.Models;    // Para acceder a User, Vehicle, Rental
 using Microsoft.AspNetCore.Mvc; // Para controladores
 using System.Linq;
+using Microsoft.AspNetCore.Authorization;
 
 namespace RentalCars.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Roles = "Admin")] // Solo accesible para administradores
     public class RentalsController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -32,10 +34,15 @@ namespace RentalCars.Controllers
             if (vehicle == null || !vehicle.Available)
                 return BadRequest("El vehículo no está disponible.");
 
+            var user = _context.Users.Find(rental.UserId);
+            if (user == null)
+                return BadRequest("El usuario no existe.");
+
             rental.TotalDays = (rental.EndDate - rental.StartDate).Days;
             rental.TotalPrice = rental.TotalDays * vehicle.Price;
 
-            vehicle.Available = false; // Marcar como no disponible
+            vehicle.Available = false;
+
             _context.Rentals.Add(rental);
             _context.SaveChanges();
 
@@ -70,4 +77,5 @@ namespace RentalCars.Controllers
             return Ok(rentals);
         }
     }
+
 }

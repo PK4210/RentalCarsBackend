@@ -2,6 +2,7 @@
 using RentalCars.Models;
 using Microsoft.AspNetCore.Mvc;
 using System.Linq;
+using Microsoft.AspNetCore.Authorization;
 
 namespace RentalCars.Controllers
 {
@@ -35,15 +36,15 @@ namespace RentalCars.Controllers
         }
 
         // POST: api/Users/Admin/CreateUser
+        [Authorize(Roles = "Admin")]
         [HttpPost("Admin/CreateUser")]
         public IActionResult AdminCreateUser([FromQuery] int requestingAdminId, [FromBody] User user)
         {
-            // Verificar si quien hace la solicitud es administrador
             var requestingAdmin = _context.Users.FirstOrDefault(u => u.UserId == requestingAdminId);
             if (requestingAdmin == null || requestingAdmin.UserType != true) // Verificar que sea administrador
                 return Unauthorized("Solo los administradores pueden crear nuevos usuarios o administradores.");
 
-            // Validar el tipo de usuario a crear (0 o 1)
+            // Validar el tipo de usuario a crear
             if (user.UserType != false && user.UserType != true)
                 return BadRequest("El campo user_type debe ser 0 (usuario común) o 1 (administrador).");
 
@@ -51,6 +52,7 @@ namespace RentalCars.Controllers
             _context.SaveChanges();
             return Ok(new { Message = "Usuario creado exitosamente.", User = user });
         }
+
 
         // DELETE: api/Users/{id}
         [HttpDelete("{id}")]

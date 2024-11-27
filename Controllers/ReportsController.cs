@@ -1,11 +1,13 @@
 ﻿using RentalCars.Data;
 using RentalCars.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace RentalCars.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Roles = "Admin")] // Solo accesible para administradores
     public class ReportsController : ControllerBase
     {
         private readonly AppDbContext _context;
