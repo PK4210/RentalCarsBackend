@@ -36,6 +36,17 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
+// Configurar CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowSpecificOrigins", policyBuilder =>
+    {
+        policyBuilder.WithOrigins("http://localhost:3000") // Dominio del frontend
+                     .AllowAnyHeader()
+                     .AllowAnyMethod()
+                     .AllowCredentials(); // Permite cookies y credenciales
+    });
+});
 
 var app = builder.Build();
 
@@ -47,6 +58,10 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Aplicar la política de CORS antes de MapControllers
+app.UseCors("AllowSpecificOrigins");
+
 app.UseAuthorization();
 app.MapControllers(); // Mapea los controladores
 app.Run();
