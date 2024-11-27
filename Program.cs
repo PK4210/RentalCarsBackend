@@ -22,6 +22,9 @@ builder.Services.AddSwaggerGen(c =>
         Description = "API para la gestión de alquiler de vehículos"
     });
 
+    // Configura un ejemplo personalizado para el modelo Rental
+    c.OperationFilter<CustomRequestBodyFilter>();
+
     // Agregar esquema de seguridad para JWT
     c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
