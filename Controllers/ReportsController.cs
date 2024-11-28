@@ -2,6 +2,7 @@
 using RentalCars.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
 
 namespace RentalCars.Controllers
 {
@@ -17,11 +18,24 @@ namespace RentalCars.Controllers
             _context = context;
         }
 
+        public class DateRange
+        {
+            public DateTime StartDate { get; set; }
+            public DateTime EndDate { get; set; }
+        }
+
         // Informe de vehículos alquilados entre dos fechas
-        [HttpPost("rentedvehicles")]
+        [HttpPost("rented-vehicles")]
         public IActionResult GetRentedVehicles([FromBody] DateRange dateRange)
         {
+            if (dateRange == null || dateRange.StartDate >= dateRange.EndDate)
+            {
+                return BadRequest("Rango de fechas inválido.");
+            }
+
             var rentals = _context.Rentals
+                .Include(r => r.User)
+                .Include(r => r.Vehicle)
                 .Where(r => !r.IsDeleted &&
                             r.StartDate >= dateRange.StartDate &&
                             r.EndDate <= dateRange.EndDate)
@@ -40,27 +54,23 @@ namespace RentalCars.Controllers
             return Ok(rentals);
         }
 
-        public class DateRange
-        {
-            public DateTime StartDate { get; set; }
-            public DateTime EndDate { get; set; }
-        }
-
-
-        // Informe de clientes con préstamos vencidos
-        [HttpGet("OverdueRentals")]
+        // Informe de vehículos con préstamos vencidos
+        [HttpGet("overdue-rentals")]
         public IActionResult GetOverdueRentals()
         {
             var today = DateTime.Now;
+
             var overdueRentals = _context.Rentals
+                .Include(r => r.User)
+                .Include(r => r.Vehicle)
                 .Where(r => r.EndDate < today && !r.IsDeleted)
                 .Select(r => new
                 {
-                    RentalId = r.RentalId,
-                    User = _context.Users.FirstOrDefault(u => u.UserId == r.UserId),
-                    Vehicle = _context.Vehicles.FirstOrDefault(v => v.VehicleId == r.VehicleId),
-                    r.StartDate,
-                    r.EndDate,
+                    r.RentalId,
+                    User = new { r.User.UserId, r.User.Username, r.User.Email },
+                    Vehicle = new { r.Vehicle.VehicleId, r.Vehicle.Model, r.Vehicle.LicensePlate },
+                    StartDate = r.StartDate.ToString("yyyy-MM-ddTHH:mm:ss"),
+                    EndDate = r.EndDate.ToString("yyyy-MM-ddTHH:mm:ss"),
                     r.TotalPrice,
                     OverdueDays = (today - r.EndDate).Days
                 })
