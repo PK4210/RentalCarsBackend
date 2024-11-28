@@ -18,18 +18,20 @@ namespace RentalCars.Controllers
         }
 
         // Informe de vehículos alquilados entre dos fechas
-        [HttpGet("RentedVehicles")]
-        public IActionResult GetRentedVehicles([FromQuery] DateTime startDate, [FromQuery] DateTime endDate)
+        [HttpPost("rentedvehicles")]
+        public IActionResult GetRentedVehicles([FromBody] DateRange dateRange)
         {
             var rentals = _context.Rentals
-                .Where(r => r.StartDate >= startDate && r.EndDate <= endDate && !r.IsDeleted)
+                .Where(r => !r.IsDeleted &&
+                            r.StartDate >= dateRange.StartDate &&
+                            r.EndDate <= dateRange.EndDate)
                 .Select(r => new
                 {
-                    RentalId = r.RentalId,
-                    Vehicle = _context.Vehicles.FirstOrDefault(v => v.VehicleId == r.VehicleId),
-                    User = _context.Users.FirstOrDefault(u => u.UserId == r.UserId),
-                    r.StartDate,
-                    r.EndDate,
+                    r.RentalId,
+                    User = new { r.User.UserId, r.User.Username, r.User.Email },
+                    Vehicle = new { r.Vehicle.VehicleId, r.Vehicle.Model, r.Vehicle.LicensePlate },
+                    StartDate = r.StartDate.ToString("yyyy-MM-ddTHH:mm:ss"), // Formato ISO
+                    EndDate = r.EndDate.ToString("yyyy-MM-ddTHH:mm:ss"),     // Formato ISO
                     r.TotalPrice,
                     r.TotalDays
                 })
@@ -37,6 +39,13 @@ namespace RentalCars.Controllers
 
             return Ok(rentals);
         }
+
+        public class DateRange
+        {
+            public DateTime StartDate { get; set; }
+            public DateTime EndDate { get; set; }
+        }
+
 
         // Informe de clientes con préstamos vencidos
         [HttpGet("OverdueRentals")]

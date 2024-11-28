@@ -3,6 +3,7 @@ using RentalCars.Models;    // Para acceder a User, Vehicle, Rental
 using Microsoft.AspNetCore.Mvc; // Para controladores
 using System.Linq;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
 
 namespace RentalCars.Controllers
 {
@@ -23,12 +24,14 @@ namespace RentalCars.Controllers
         public IActionResult GetRentals()
         {
             var rentals = _context.Rentals
-                .Where(r => !r.IsDeleted) // Filtrar por IsDeleted
+                .Where(r => !r.IsDeleted)
+                .Include(r => r.User) // Incluir información del usuario
+                .Include(r => r.Vehicle) // Incluir información del vehículo
                 .Select(r => new
                 {
                     r.RentalId,
-                    r.UserId,
-                    r.VehicleId,
+                    User = new { r.User.UserId, r.User.Username, r.User.Email },
+                    Vehicle = new { r.Vehicle.VehicleId, r.Vehicle.Model, r.Vehicle.LicensePlate },
                     r.StartDate,
                     r.EndDate,
                     r.TotalPrice,
@@ -40,6 +43,8 @@ namespace RentalCars.Controllers
 
             return Ok(rentals);
         }
+
+
 
 
         // POST: api/Rentals
